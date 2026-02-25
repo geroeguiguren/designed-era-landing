@@ -1,0 +1,316 @@
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+
+body{
+  margin: 0;
+  font-family: "Georgia", serif;
+  background: #fff;
+  color: #111;
+  overflow: hidden; 
+}
+
+/* ============================= */
+/* HEADER */
+/* ============================= */
+.site-header{
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  background: #fff;
+  position: relative;
+  z-index: 50;
+}
+
+.brand{
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brand__logo{
+  height: 18px;
+  width: auto;
+  display: block;
+}
+
+.nav{
+  display: flex;
+  gap: 24px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.nav a{
+  text-decoration: none;
+  color: #222;
+  opacity: 0.8;
+}
+.nav a:hover{ opacity: 1; }
+
+/* ============================= */
+/* mosaico */
+/* ============================= */
+.home{
+  height: calc(100vh - 70px);
+  padding: 0 60px;
+  display: flex;
+}
+
+.mosaic{
+  width: 100%;
+  flex: 1;
+  position: relative;
+}
+
+
+.mosaic__headline{
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 38px;
+  font-weight: 400;
+  color: #111;
+  text-align: center;
+  pointer-events: none;
+  z-index: 20;
+  white-space: nowrap;
+  opacity: 0;
+  letter-spacing: .22em;
+  filter: blur(12px);
+}
+
+.mosaic__headline.is-in{
+  animation: headlineSplit 1200ms cubic-bezier(.16,.95,.2,1) forwards;
+}
+
+@keyframes headlineSplit{
+  0%{
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.98);
+    letter-spacing: .28em;
+    filter: blur(16px);
+  }
+  55%{ opacity: 1; }
+  75%{
+    letter-spacing: .05em;
+    filter: blur(0px);
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+  100%{
+    opacity: 1;
+    letter-spacing: .02em;
+    filter: blur(0px);
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.mosaic__headline.dim{
+  opacity: .72;
+  transition: opacity 450ms ease;
+}
+
+.mosaic__headline.is-out{
+  opacity: 0;
+  transition: opacity 450ms ease;
+}
+
+
+.mosaic__viewport{
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 70px);
+  overflow: hidden;
+
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.mosaic__viewport.is-grabbing{ cursor: grabbing; }
+
+
+.mosaic__viewport::before{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  pointer-events:none;
+  z-index: 5;
+  background:
+    radial-gradient(120% 90% at 50% 40%, rgba(255,255,255,0) 55%, rgba(0,0,0,.06) 100%);
+  opacity: .75;
+}
+
+
+.mosaic__content{
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  will-change: transform;
+  transform: translate3d(0,0,0);
+  transform-origin: 50% 0%; 
+}
+
+/* ============================= */
+/* GRID MASONRY */
+/* ============================= */
+.mosaic__grid{
+  column-count: var(--cols, 6);
+  column-gap: 28px;
+
+  padding: 24px 14px 24px;
+  width: 100%;
+}
+
+
+.tile{
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
+
+  margin: 0 0 24px;
+
+  overflow: hidden;
+  opacity: 0;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+
+  position: relative;
+  z-index: 1;
+  transition: opacity 320ms ease;
+}
+
+
+.tile:hover{ z-index: 10; }
+
+.mosaic-ready .tile{ opacity: 1; }
+
+
+.tile img{
+  width: 100%;
+  display: block;
+  object-fit: cover;
+
+  filter: grayscale(100%);
+  opacity: 0.5;
+
+
+  --mx: 0px;
+  --my: 0px;
+  --hScale: 1;
+  --cinX: 0px;
+  --cinY: 0px;
+
+  transform: translate3d(calc(var(--mx) + var(--cinX)), calc(var(--my) + var(--cinY)), 0) scale(var(--hScale));
+  transition:
+    transform 520ms cubic-bezier(.16,.95,.2,1),
+    filter 520ms cubic-bezier(.16,.95,.2,1),
+    opacity 520ms cubic-bezier(.16,.95,.2,1);
+  will-change: transform, filter, opacity;
+}
+
+/* Overlay  */
+.tile::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background: radial-gradient(120% 120% at 50% 30%, rgba(255,255,255,.10), rgba(0,0,0,0));
+  opacity: 0;
+  transition: opacity 520ms cubic-bezier(.16,.95,.2,1);
+}
+
+/* Hover reveal + zoom */
+.tile:hover img{
+  --hScale: 1.06;
+  filter: grayscale(60%);
+  opacity: 0.96;
+}
+
+.tile:hover::after{ opacity: 1; }
+
+
+.mosaic__grid.is-hovering .tile{ opacity: 0.86; }
+.mosaic__grid.is-hovering .tile:hover{ opacity: 1; }
+
+/* ============================= */
+/* OVERLAY FLY */
+/* ============================= */
+.fly-layer{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.fly-tile{
+  position: absolute;
+  overflow: hidden;
+}
+
+.fly-tile img{
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  filter: grayscale(100%);
+  opacity: 0.5;
+}
+
+/* ============================= */
+/*  FLOAT DEL RECUADRO  */
+/* ============================= */
+.tile__float{
+  will-change: transform;
+  transform: translate3d(0,0,0);
+  animation: tileDrift var(--floatDur, 8.5s) ease-in-out infinite;
+  animation-delay: var(--floatDelay, 0s);
+}
+
+@keyframes tileDrift{
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
+  35%  { transform: translate3d(var(--floatX, 10px), var(--floatY, -10px), 0) rotate(var(--floatR, 0.4deg)); }
+  70%  { transform: translate3d(calc(var(--floatX, 10px) * -0.55), calc(var(--floatY, -10px) * -0.35), 0) rotate(calc(var(--floatR, 0.4deg) * -0.6)); }
+  100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+}
+
+/* ============================= */
+/* RESPONSIVE */
+/* ============================= */
+@media (max-width: 1400px){
+  .mosaic__grid{ column-gap: 22px; padding: 22px 11px 22px; }
+  .tile{ margin-bottom: 20px; }
+}
+
+@media (max-width: 1100px){
+  .mosaic__grid{ column-gap: 18px; padding: 20px 9px 20px; }
+  .tile{ margin-bottom: 18px; }
+}
+
+@media (max-width: 800px){
+  .home{ padding: 0 30px; }
+
+  .mosaic__grid{ column-gap: 14px; padding: 18px 7px 18px; }
+  .tile{ margin-bottom: 14px; }
+
+  .mosaic__headline{
+    font-size: 28px;
+    white-space: normal;
+    padding: 0 10px;
+  }
+}
+
+/* ============================= */
+/* Accesibilidad / UX */
+/* ============================= */
+@media (prefers-reduced-motion: reduce){
+  .tile__float{ animation: none; }
+  .mosaic__headline.is-in{ animation: none; opacity: 1; filter: none; }
+  .mosaic__viewport::before{ opacity: 0; }
+}
