@@ -1,13 +1,10 @@
-
-
 const grid = document.getElementById("mosaicGrid");
 const headline = document.querySelector(".mosaic__headline");
 const viewport = document.getElementById("viewport");
 const content = document.getElementById("content");
 
-
-const CINEMATIC_MODE = true;
-
+// ✅ Para que NO haya “movimiento cinematográfico” lateral/rotación mientras scrolleás
+const CINEMATIC_MODE = false;
 
 const baseImages = [
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
@@ -24,21 +21,19 @@ function lerp(a, b, t){ return a + (b - a) * t; }
 let tiles = [];
 let decodePromises = [];
 
-
 let zoom = 1;
 let zoomTarget = 1;
-let zoomVel = 0;
 let zoomRAF = 0;
 let zoomAnchor = null;
 
-const ZOOM_MIN = 1;        
-const ZOOM_MAX = 1.65;     
-const ZOOM_WHEEL = 0.0007; 
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 1.65;
+
+let introAnimating = false;
 
 function prefersReducedMotion(){
   return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
-
 
 function getColCount(){
   const w = window.innerWidth;
@@ -52,7 +47,7 @@ function applyColCount(){
   grid.style.setProperty("--cols", String(getColCount()));
 }
 
-
+/* ✅ Render SIN wrapper .tile__float (sin drift automático) */
 function renderTilesFromList(list){
   tiles = [];
   decodePromises = [];
@@ -62,19 +57,6 @@ function renderTilesFromList(list){
     const tile = document.createElement("div");
     tile.className = "tile";
 
-    const floatWrap = document.createElement("div");
-    floatWrap.className = "tile__float";
-
-    
-    floatWrap.style.setProperty("--floatX", `${rand(-14, 14).toFixed(1)}px`);
-    floatWrap.style.setProperty("--floatY", `${rand(-16, -6).toFixed(1)}px`);
-    floatWrap.style.setProperty("--floatR", `${rand(-0.55, 0.55).toFixed(2)}deg`);
-    floatWrap.style.setProperty("--floatDur", `${rand(6.8, 10.5).toFixed(2)}s`);
-
-   
-    const i = tiles.length;
-    floatWrap.style.setProperty("--floatDelay", `${(i * 0.12).toFixed(2)}s`);
-
     const img = document.createElement("img");
     img.src = `./assets/home/${pad2(num)}.webp`;
     img.alt = `Designed Era ${num}`;
@@ -82,15 +64,13 @@ function renderTilesFromList(list){
     img.decoding = "async";
     img.draggable = false;
 
-    floatWrap.appendChild(img);
-    tile.appendChild(floatWrap);
+    tile.appendChild(img);
     grid.appendChild(tile);
 
     tiles.push(tile);
     if (img.decode) decodePromises.push(img.decode().catch(() => {}));
   });
 }
-
 
 async function ensureFillHeight(){
   const target = viewport.clientHeight * 2.2;
@@ -114,7 +94,9 @@ async function ensureFillHeight(){
   }
 }
 
-
+/* ============================= */
+/* FLY-IN DESORDENADO (entrada) */
+/* ============================= */
 function createFlyLayer(){
   const layer = document.createElement("div");
   layer.className = "fly-layer";
@@ -123,6 +105,15 @@ function createFlyLayer(){
 }
 
 function animateImages(){
+  introAnimating = true;
+
+  // si el user prefiere reduced motion, no animamos
+  if (prefersReducedMotion()){
+    document.body.classList.add("mosaic-ready");
+    introAnimating = false;
+    return;
+  }
+
   const layer = createFlyLayer();
   const finalRects = tiles.map(t => t.getBoundingClientRect());
 
@@ -186,12 +177,15 @@ function animateImages(){
   });
 
   Promise.all(anims.map(a => a.finished.catch(() => {}))).finally(() => {
-    document.body.classList.add("mosaic-ready");
+    document.body.classList.add("mosaic-ready"); // ✅ aparecen las tiles reales
     layer.remove();
+    introAnimating = false;
   });
 }
 
-
+/* ============================= */
+/* DRAG + INERTIA */
+/* ============================= */
 const drag = {
   isDown: false,
   startY: 0,
@@ -238,10 +232,9 @@ function applyOffset(){
     `translate3d(${cinX.toFixed(2)}px, ${y}px, 0) rotate(${cinR.toFixed(3)}deg) scale(${zoom.toFixed(4)})`;
 }
 
-
 function measureLimits(){
   const vh = viewport.clientHeight;
-  const ch = content.scrollHeight * zoom; 
+  const ch = content.scrollHeight * zoom;
   drag.maxOffset = Math.max(0, ch - vh);
   drag.offset = clamp(drag.offset, 0, drag.maxOffset);
 }
@@ -337,6 +330,9 @@ function springTo(target){
   drag.inertiaRAF = requestAnimationFrame(tick);
 }
 
+/* ============================= */
+/* ZOOM SUAVE */
+/* ============================= */
 function startZoomSmooth(){
   if (zoomRAF) return;
 
@@ -346,16 +342,14 @@ function startZoomSmooth(){
     const dt = Math.min(0.05, (now - prev) / 1000);
     prev = now;
 
-    const SMOOTH = 12; 
+    const SMOOTH = 12;
     const k = 1 - Math.exp(-SMOOTH * dt);
 
     zoom = zoom + (zoomTarget - zoom) * k;
 
- 
     if (zoomAnchor){
       drag.offset = zoomAnchor.yContent - (zoomAnchor.cursorY / zoom);
 
-      
       if (now > zoomAnchor.tEnd && Math.abs(zoomTarget - zoom) < 0.002){
         zoomAnchor = null;
       }
@@ -377,7 +371,6 @@ function startZoomSmooth(){
 
   zoomRAF = requestAnimationFrame(tick);
 }
-
 
 function normalizeWheel(e){
   let dy = e.deltaY;
@@ -407,11 +400,13 @@ function bindWheelZoom(){
   }, { passive: false });
 }
 
-
 function bindDrag(){
   bindWheelZoom();
 
   viewport.addEventListener("pointerdown", (e) => {
+    // ✅ Si tocó una imagen, NO iniciamos drag (eso es tap para lightbox)
+    if (e.target.closest(".tile img")) return;
+
     stopInertia();
     drag.isDown = true;
     viewport.classList.add("is-grabbing");
@@ -481,7 +476,9 @@ function bindDrag(){
   viewport.addEventListener("pointercancel", endDrag);
 }
 
-
+/* ============================= */
+/* HOVER MAGNÉTICO (se mantiene) */
+/* ============================= */
 function enableMagneticHover(){
   let activeTile = null;
   let raf = 0;
@@ -522,6 +519,99 @@ function enableMagneticHover(){
   });
 }
 
+/* ============================= */
+/* LIGHTBOX (click/tap -> grande + color) */
+/* ============================= */
+let lightboxEl = null;
+let lightboxImg = null;
+
+function openLightbox(src, alt){
+  if (!lightboxEl){
+    lightboxEl = document.createElement("div");
+    lightboxEl.className = "lightbox";
+    lightboxEl.setAttribute("role", "dialog");
+    lightboxEl.setAttribute("aria-modal", "true");
+
+    const btn = document.createElement("button");
+    btn.className = "lightbox__close";
+    btn.type = "button";
+    btn.setAttribute("aria-label", "Close image");
+    btn.textContent = "×";
+
+    lightboxImg = document.createElement("img");
+    lightboxImg.className = "lightbox__img";
+
+    lightboxEl.appendChild(btn);
+    lightboxEl.appendChild(lightboxImg);
+    document.body.appendChild(lightboxEl);
+
+    lightboxEl.addEventListener("click", (e) => {
+      if (e.target === lightboxEl) closeLightbox();
+    });
+    btn.addEventListener("click", closeLightbox);
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && lightboxEl.classList.contains("is-open")){
+        closeLightbox();
+      }
+    });
+  }
+
+  lightboxImg.src = src;
+  lightboxImg.alt = alt || "";
+
+  viewport.style.pointerEvents = "none";
+  requestAnimationFrame(() => lightboxEl.classList.add("is-open"));
+}
+
+function closeLightbox(){
+  if (!lightboxEl) return;
+
+  lightboxEl.classList.remove("is-open");
+  viewport.style.pointerEvents = "";
+
+  setTimeout(() => {
+    if (!lightboxEl.classList.contains("is-open")){
+      lightboxImg.src = "";
+      lightboxImg.alt = "";
+    }
+  }, 250);
+}
+
+/* ✅ TAP/CLICK robusto (no depende de click) */
+let tap = null;
+
+function onPointerDownForLightbox(e){
+  if (introAnimating) return; // durante el fly-in, ignoramos taps
+  if (lightboxEl && lightboxEl.classList.contains("is-open")) return;
+
+  const img = e.target.closest(".tile img");
+  if (!img) return;
+
+  tap = { img, x: e.clientX, y: e.clientY };
+}
+
+function onPointerMoveForLightbox(e){
+  if (!tap) return;
+  const dx = e.clientX - tap.x;
+  const dy = e.clientY - tap.y;
+  if ((dx*dx + dy*dy) > (8*8)) tap = null;
+}
+
+function onPointerUpForLightbox(){
+  if (!tap) return;
+  openLightbox(tap.img.src, tap.img.alt);
+  tap = null;
+}
+
+viewport.addEventListener("pointerdown", onPointerDownForLightbox, true);
+viewport.addEventListener("pointermove", onPointerMoveForLightbox, true);
+viewport.addEventListener("pointerup", onPointerUpForLightbox, true);
+viewport.addEventListener("pointercancel", () => { tap = null; }, true);
+
+/* ============================= */
+/* SECUENCIA INICIAL */
+/* ============================= */
 async function runSequence(){
   requestAnimationFrame(() => headline.classList.add("is-in"));
 
@@ -536,16 +626,14 @@ async function runSequence(){
 
     enableMagneticHover();
 
-    
-
     zoom = 1;
     zoomTarget = 1;
-    zoomVel = 0;
 
     measureLimits();
     drag.offset = 0;
     applyOffset();
 
+    // ✅ restauramos la entrada desordenada
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         animateImages();
@@ -556,7 +644,6 @@ async function runSequence(){
   }, HEADLINE_MS + GAP);
 }
 
-
 function init(){
   applyColCount();
   bindDrag();
@@ -564,7 +651,6 @@ function init(){
 }
 
 init();
-
 
 let resizeT;
 window.addEventListener("resize", () => {
