@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Designed Era — Home</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles/home.css" />
 </head>
 
 <body class="page-home">
@@ -13,7 +13,20 @@
       <img class="brand__logo" src="./assets/img/era_logo_cropped.png" alt="Designed Era" />
     </a>
 
-    <nav class="nav" aria-label="Primary navigation">
+    <button
+      class="nav-toggle"
+      id="navToggle"
+      type="button"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="siteNav"
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="nav" id="siteNav" aria-label="Primary navigation">
       <a href="./projects.html">Projects</a>
       <a href="./visualization.html">Visualization</a>
       <a href="./collections.html">Collections</a>
@@ -28,12 +41,9 @@
 
       <div class="mosaic__viewport" id="viewport" aria-label="Mosaic viewport">
         <div class="mosaic__content" id="content">
-          <div class="mosaic__grid" id="mosaicGrid">
-           
-          </div>
+          <div class="mosaic__grid" id="mosaicGrid"></div>
         </div>
       </div>
-
     </section>
   </main>
 

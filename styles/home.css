@@ -20,7 +20,7 @@ body{
   padding: 0 40px;
   background: #fff;
   position: relative;
-  z-index: 50;
+  z-index: 100;
 }
 
 .brand{
@@ -28,6 +28,8 @@ body{
   align-items: center;
   text-decoration: none;
   color: inherit;
+  position: relative;
+  z-index: 102;
 }
 
 .brand__logo{
@@ -49,10 +51,49 @@ body{
   color: #222;
   opacity: 0.8;
 }
-.nav a:hover{ opacity: 1; }
+
+.nav a:hover{
+  opacity: 1;
+}
 
 /* ============================= */
-/* mosaico */
+/* HAMBURGER */
+/* ============================= */
+.nav-toggle{
+  display: none;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  z-index: 102;
+}
+
+.nav-toggle span{
+  display: block;
+  width: 22px;
+  height: 1.5px;
+  background: #111;
+  margin: 5px auto;
+  transition: transform 260ms ease, opacity 260ms ease;
+}
+
+.nav-toggle.is-open span:nth-child(1){
+  transform: translateY(6.5px) rotate(45deg);
+}
+
+.nav-toggle.is-open span:nth-child(2){
+  opacity: 0;
+}
+
+.nav-toggle.is-open span:nth-child(3){
+  transform: translateY(-6.5px) rotate(-45deg);
+}
+
+/* ============================= */
+/* MOSAICO */
 /* ============================= */
 .home{
   height: calc(100vh - 70px);
@@ -81,6 +122,8 @@ body{
   opacity: 0;
   letter-spacing: .22em;
   filter: blur(12px);
+  width: max-content;
+  max-width: calc(100vw - 80px);
 }
 
 .mosaic__headline.is-in{
@@ -123,13 +166,14 @@ body{
   width: 100%;
   height: calc(100vh - 70px);
   overflow: hidden;
-
   cursor: grab;
   user-select: none;
   touch-action: none;
 }
 
-.mosaic__viewport.is-grabbing{ cursor: grabbing; }
+.mosaic__viewport.is-grabbing{
+  cursor: grabbing;
+}
 
 .mosaic__viewport::before{
   content:"";
@@ -153,12 +197,12 @@ body{
 }
 
 /* ============================= */
-/* GRID MASONRY (gaps más finos) */
+/* GRID */
 /* ============================= */
 .mosaic__grid{
   column-count: var(--cols, 6);
-  column-gap: 14px; /* antes 28px */
-  padding: 16px 8px 16px; /* antes 24px 14px 24px */
+  column-gap: 14px;
+  padding: 16px 8px 16px;
   width: 100%;
 }
 
@@ -166,31 +210,31 @@ body{
   break-inside: avoid;
   -webkit-column-break-inside: avoid;
   page-break-inside: avoid;
-
-  margin: 0 0 14px; /* antes 24px */
-
+  margin: 0 0 14px;
   overflow: hidden;
   opacity: 0;
   transform: translateZ(0);
   backface-visibility: hidden;
-
   position: relative;
   z-index: 1;
   transition: opacity 320ms ease;
 }
 
-.tile:hover{ z-index: 10; }
+.tile:hover{
+  z-index: 10;
+}
 
-/* aparecen cuando termina la intro */
-.mosaic-ready .tile{ opacity: 1; }
+.mosaic-ready .tile{
+  opacity: 1;
+}
 
 .tile img{
   width: 100%;
   display: block;
   object-fit: cover;
-
   filter: grayscale(100%);
   opacity: 0.5;
+  cursor: pointer;
 
   --mx: 0px;
   --my: 0px;
@@ -206,7 +250,6 @@ body{
   will-change: transform, filter, opacity;
 }
 
-/* Overlay */
 .tile::after{
   content:"";
   position:absolute;
@@ -217,50 +260,199 @@ body{
   transition: opacity 520ms cubic-bezier(.16,.95,.2,1);
 }
 
-/* Hover reveal + zoom */
 .tile:hover img{
   --hScale: 1.06;
   filter: grayscale(60%);
   opacity: 0.96;
 }
 
-.tile:hover::after{ opacity: 1; }
+.tile:hover::after{
+  opacity: 1;
+}
 
-.mosaic__grid.is-hovering .tile{ opacity: 0.86; }
-.mosaic__grid.is-hovering .tile:hover{ opacity: 1; }
+.mosaic__grid.is-hovering .tile{
+  opacity: 0.86;
+}
+
+.mosaic__grid.is-hovering .tile:hover{
+  opacity: 1;
+}
 
 /* ============================= */
-/* RESPONSIVE (gaps refinados) */
+/* RESPONSIVE DESKTOP / NOTEBOOK */
 /* ============================= */
 @media (max-width: 1400px){
+  .home{ padding: 0 40px; }
   .mosaic__grid{ column-gap: 12px; padding: 14px 6px 14px; }
   .tile{ margin-bottom: 12px; }
 }
 
 @media (max-width: 1100px){
+  .site-header{ padding: 0 28px; }
+  .home{ padding: 0 28px; }
   .mosaic__grid{ column-gap: 10px; padding: 12px 5px 12px; }
   .tile{ margin-bottom: 10px; }
-}
-
-@media (max-width: 800px){
-  .home{ padding: 0 30px; }
-
-  .mosaic__grid{ column-gap: 8px; padding: 10px 4px 10px; }
-  .tile{ margin-bottom: 8px; }
 
   .mosaic__headline{
-    font-size: 28px;
-    white-space: normal;
-    padding: 0 10px;
+    font-size: 32px;
   }
 }
 
 /* ============================= */
-/* Accesibilidad / UX */
+/* MOBILE */
+/* ============================= */
+@media (max-width: 768px){
+  html, body{
+    height: auto;
+    min-height: 100%;
+  }
+
+  body{
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .site-header{
+    height: 70px;
+    padding: 0 18px;
+    position: sticky;
+    top: 0;
+  }
+
+  .nav-toggle{
+    display: inline-block;
+  }
+
+  .nav{
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    background: rgba(255,255,255,0.98);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(0,0,0,.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 22px 20px 28px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-10px);
+    transition:
+      opacity 220ms ease,
+      transform 220ms ease,
+      visibility 220ms ease;
+    z-index: 101;
+  }
+
+  .nav.is-open{
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .nav a{
+    font-size: 12px;
+    letter-spacing: .12em;
+  }
+
+  .home{
+    height: auto;
+    min-height: unset;
+    display: block;
+    padding: 0 16px 28px;
+  }
+
+  .mosaic{
+    position: relative;
+  }
+
+  .mosaic__headline{
+    position: fixed;
+    top: 50vh;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100vw - 40px);
+    max-width: 340px;
+    white-space: normal;
+    font-size: 22px;
+    line-height: 1.35;
+    letter-spacing: .10em;
+    text-align: center;
+    z-index: 20;
+  }
+
+  .mosaic__viewport{
+    height: auto;
+    overflow: visible;
+    cursor: default;
+    touch-action: auto;
+  }
+
+  .mosaic__viewport::before{
+    display: none;
+  }
+
+  .mosaic__content{
+    position: relative;
+    transform: none !important;
+    width: 100%;
+  }
+
+  .mosaic__grid{
+    column-count: 1 !important;
+    column-gap: 0;
+    padding: 24px 0 0;
+  }
+
+  .tile{
+    margin: 0 0 14px;
+    opacity: 1;
+  }
+
+  .tile img{
+    transform: none !important;
+    filter: grayscale(100%);
+    opacity: 0.58;
+  }
+
+  .tile:hover img{
+    transform: none !important;
+    filter: grayscale(100%);
+    opacity: 0.58;
+  }
+
+  .tile::after{
+    display: none;
+  }
+
+  .mosaic__grid.is-hovering .tile,
+  .mosaic__grid.is-hovering .tile:hover{
+    opacity: 1;
+  }
+
+  .mosaic__headline.is-out{
+    opacity: .9;
+  }
+}
+
+/* ============================= */
+/* ACCESSIBILITY */
 /* ============================= */
 @media (prefers-reduced-motion: reduce){
-  .mosaic__headline.is-in{ animation: none; opacity: 1; filter: none; }
-  .mosaic__viewport::before{ opacity: 0; }
+  .mosaic__headline.is-in{
+    animation: none;
+    opacity: 1;
+    filter: none;
+  }
+
+  .mosaic__viewport::before{
+    opacity: 0;
+  }
 }
 
 /* ============================= */
@@ -321,10 +513,8 @@ body{
   background: rgba(0,0,0,.55);
 }
 
-.tile img{ cursor: pointer; }
-
 /* ============================= */
-/* OVERLAY FLY (entrada) */
+/* OVERLAY FLY */
 /* ============================= */
 .fly-layer{
   position: fixed;

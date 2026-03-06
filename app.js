@@ -2,8 +2,9 @@ const grid = document.getElementById("mosaicGrid");
 const headline = document.querySelector(".mosaic__headline");
 const viewport = document.getElementById("viewport");
 const content = document.getElementById("content");
+const navToggle = document.getElementById("navToggle");
+const siteNav = document.getElementById("siteNav");
 
-// ✅ Para que NO haya “movimiento cinematográfico” lateral/rotación mientras scrolleás
 const CINEMATIC_MODE = false;
 
 const baseImages = [
@@ -17,6 +18,10 @@ const pad2 = (n) => String(n).padStart(2, "0");
 function rand(min, max){ return Math.random() * (max - min) + min; }
 function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 function lerp(a, b, t){ return a + (b - a) * t; }
+
+function isMobile(){
+  return window.innerWidth <= 768;
+}
 
 let tiles = [];
 let decodePromises = [];
@@ -37,7 +42,7 @@ function prefersReducedMotion(){
 
 function getColCount(){
   const w = window.innerWidth;
-  if (w <= 800) return 2;
+  if (w <= 768) return 1;
   if (w <= 1100) return 4;
   if (w <= 1400) return 5;
   return 6;
@@ -47,7 +52,6 @@ function applyColCount(){
   grid.style.setProperty("--cols", String(getColCount()));
 }
 
-/* ✅ Render SIN wrapper .tile__float (sin drift automático) */
 function renderTilesFromList(list){
   tiles = [];
   decodePromises = [];
@@ -73,8 +77,8 @@ function renderTilesFromList(list){
 }
 
 async function ensureFillHeight(){
-  const target = viewport.clientHeight * 2.2;
-  let repeats = 1;
+  const target = isMobile() ? 0 : viewport.clientHeight * 2.2;
+  let repeats = isMobile() ? 1 : 1;
 
   while (repeats <= 8){
     const list = [];
@@ -85,18 +89,51 @@ async function ensureFillHeight(){
     renderTilesFromList(list);
 
     await Promise.all(decodePromises);
-    grid.offsetHeight; // reflow
+    grid.offsetHeight;
 
     const h = grid.scrollHeight;
-    if (h >= target) break;
+    if (isMobile() || h >= target) break;
 
     repeats++;
   }
 }
 
-/* ============================= */
-/* FLY-IN DESORDENADO (entrada) */
-/* ============================= */
+
+function closeMenu(){
+  siteNav.classList.remove("is-open");
+  navToggle.classList.remove("is-open");
+  navToggle.setAttribute("aria-expanded", "false");
+}
+
+function openMenu(){
+  siteNav.classList.add("is-open");
+  navToggle.classList.add("is-open");
+  navToggle.setAttribute("aria-expanded", "true");
+}
+
+function bindMenu(){
+  if (!navToggle || !siteNav) return;
+
+  navToggle.addEventListener("click", () => {
+    const isOpen = siteNav.classList.contains("is-open");
+    if (isOpen) closeMenu();
+    else openMenu();
+  });
+
+  siteNav.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", closeMenu);
+  });
+
+  window.addEventListener("resize", () => {
+    if (!isMobile()) closeMenu();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
+}
+
+
 function createFlyLayer(){
   const layer = document.createElement("div");
   layer.className = "fly-layer";
@@ -107,8 +144,7 @@ function createFlyLayer(){
 function animateImages(){
   introAnimating = true;
 
-  // si el user prefiere reduced motion, no animamos
-  if (prefersReducedMotion()){
+  if (prefersReducedMotion() || isMobile()){
     document.body.classList.add("mosaic-ready");
     introAnimating = false;
     return;
@@ -157,7 +193,7 @@ function animateImages(){
     fly.appendChild(img);
     layer.appendChild(fly);
 
-    const dist = Math.hypot((r.left + r.width/2) - cx, (r.top + r.height/2) - cy);
+    const dist = Math.hypot((r.left + r.width / 2) - cx, (r.top + r.height / 2) - cy);
     const maxDist = Math.hypot(cx, cy);
     const wave = dist / maxDist;
 
@@ -167,7 +203,7 @@ function animateImages(){
     const a = fly.animate(
       [
         { transform: `translate3d(0,0,0) scale(${rand(0.25, 0.55).toFixed(2)})`, opacity: 0, filter: "blur(10px)" },
-        { transform: `translate3d(${(fx - sx)*0.85}px, ${(fy - sy)*0.85}px, 0) scale(1.04)`, opacity: 1, filter: "blur(2px)", offset: 0.78 },
+        { transform: `translate3d(${(fx - sx) * 0.85}px, ${(fy - sy) * 0.85}px, 0) scale(1.04)`, opacity: 1, filter: "blur(2px)", offset: 0.78 },
         { transform: `translate3d(${(fx - sx)}px, ${(fy - sy)}px, 0) scale(1)`, opacity: 1, filter: "blur(0px)" }
       ],
       { duration, delay, easing: "cubic-bezier(.16,.95,.2,1)", fill: "forwards" }
@@ -177,15 +213,13 @@ function animateImages(){
   });
 
   Promise.all(anims.map(a => a.finished.catch(() => {}))).finally(() => {
-    document.body.classList.add("mosaic-ready"); // ✅ aparecen las tiles reales
+    document.body.classList.add("mosaic-ready");
     layer.remove();
     introAnimating = false;
   });
 }
 
-/* ============================= */
-/* DRAG + INERTIA */
-/* ============================= */
+
 const drag = {
   isDown: false,
   startY: 0,
@@ -202,6 +236,11 @@ const drag = {
 const cinematic = { x: 0, r: 0 };
 
 function applyOffset(){
+  if (isMobile()){
+    content.style.transform = "none";
+    return;
+  }
+
   const y = (-drag.offset).toFixed(2);
 
   let cinX = 0;
@@ -233,6 +272,12 @@ function applyOffset(){
 }
 
 function measureLimits(){
+  if (isMobile()){
+    drag.maxOffset = 0;
+    drag.offset = 0;
+    return;
+  }
+
   const vh = viewport.clientHeight;
   const ch = content.scrollHeight * zoom;
   drag.maxOffset = Math.max(0, ch - vh);
@@ -258,6 +303,8 @@ function stopInertia(){
 }
 
 function startInertia(){
+  if (isMobile()) return;
+
   stopInertia();
   let prev = performance.now();
 
@@ -268,9 +315,11 @@ function startInertia(){
     drag.offset += drag.v * dt;
 
     if (drag.offset < 0){
-      drag.offset = 0; drag.v = 0;
+      drag.offset = 0;
+      drag.v = 0;
     } else if (drag.offset > drag.maxOffset){
-      drag.offset = drag.maxOffset; drag.v = 0;
+      drag.offset = drag.maxOffset;
+      drag.v = 0;
     }
 
     drag.v *= Math.pow(FRICTION, dt * 60);
@@ -291,6 +340,8 @@ function startInertia(){
 }
 
 function springTo(target){
+  if (isMobile()) return;
+
   stopInertia();
 
   let x = drag.offset;
@@ -330,10 +381,8 @@ function springTo(target){
   drag.inertiaRAF = requestAnimationFrame(tick);
 }
 
-/* ============================= */
-/* ZOOM SUAVE */
-/* ============================= */
 function startZoomSmooth(){
+  if (isMobile()) return;
   if (zoomRAF) return;
 
   let prev = performance.now();
@@ -381,6 +430,8 @@ function normalizeWheel(e){
 
 function bindWheelZoom(){
   viewport.addEventListener("wheel", (e) => {
+    if (isMobile()) return;
+
     e.preventDefault();
 
     let dy = normalizeWheel(e);
@@ -404,7 +455,7 @@ function bindDrag(){
   bindWheelZoom();
 
   viewport.addEventListener("pointerdown", (e) => {
-    // ✅ Si tocó una imagen, NO iniciamos drag (eso es tap para lightbox)
+    if (isMobile()) return;
     if (e.target.closest(".tile img")) return;
 
     stopInertia();
@@ -414,13 +465,13 @@ function bindDrag(){
 
     drag.startY = e.clientY;
     drag.startOffset = drag.offset;
-
     drag.lastY = e.clientY;
     drag.lastT = performance.now();
     drag.v *= 0.25;
   });
 
   viewport.addEventListener("pointermove", (e) => {
+    if (isMobile()) return;
     if (!drag.isDown) return;
 
     const dy = e.clientY - drag.startY;
@@ -455,6 +506,7 @@ function bindDrag(){
   });
 
   function endDrag(){
+    if (isMobile()) return;
     if (!drag.isDown) return;
 
     drag.isDown = false;
@@ -476,14 +528,17 @@ function bindDrag(){
   viewport.addEventListener("pointercancel", endDrag);
 }
 
-/* ============================= */
-/* HOVER MAGNÉTICO (se mantiene) */
-/* ============================= */
+
 function enableMagneticHover(){
+  if (isMobile()) return;
+
   let activeTile = null;
   let raf = 0;
 
-  grid.addEventListener("pointerenter", () => grid.classList.add("is-hovering"));
+  grid.addEventListener("pointerenter", () => {
+    if (!isMobile()) grid.classList.add("is-hovering");
+  });
+
   grid.addEventListener("pointerleave", () => {
     grid.classList.remove("is-hovering");
     if (activeTile){
@@ -494,6 +549,8 @@ function enableMagneticHover(){
   });
 
   grid.addEventListener("pointermove", (e) => {
+    if (isMobile()) return;
+
     const t = e.target.closest(".tile");
     if (!t) return;
 
@@ -519,9 +576,7 @@ function enableMagneticHover(){
   });
 }
 
-/* ============================= */
-/* LIGHTBOX (click/tap -> grande + color) */
-/* ============================= */
+
 let lightboxEl = null;
 let lightboxImg = null;
 
@@ -548,6 +603,7 @@ function openLightbox(src, alt){
     lightboxEl.addEventListener("click", (e) => {
       if (e.target === lightboxEl) closeLightbox();
     });
+
     btn.addEventListener("click", closeLightbox);
 
     window.addEventListener("keydown", (e) => {
@@ -578,11 +634,10 @@ function closeLightbox(){
   }, 250);
 }
 
-/* ✅ TAP/CLICK robusto (no depende de click) */
 let tap = null;
 
 function onPointerDownForLightbox(e){
-  if (introAnimating) return; // durante el fly-in, ignoramos taps
+  if (introAnimating) return;
   if (lightboxEl && lightboxEl.classList.contains("is-open")) return;
 
   const img = e.target.closest(".tile img");
@@ -595,7 +650,7 @@ function onPointerMoveForLightbox(e){
   if (!tap) return;
   const dx = e.clientX - tap.x;
   const dy = e.clientY - tap.y;
-  if ((dx*dx + dy*dy) > (8*8)) tap = null;
+  if ((dx * dx + dy * dy) > (8 * 8)) tap = null;
 }
 
 function onPointerUpForLightbox(){
@@ -609,9 +664,7 @@ viewport.addEventListener("pointermove", onPointerMoveForLightbox, true);
 viewport.addEventListener("pointerup", onPointerUpForLightbox, true);
 viewport.addEventListener("pointercancel", () => { tap = null; }, true);
 
-/* ============================= */
-/* SECUENCIA INICIAL */
-/* ============================= */
+
 async function runSequence(){
   requestAnimationFrame(() => headline.classList.add("is-in"));
 
@@ -633,19 +686,21 @@ async function runSequence(){
     drag.offset = 0;
     applyOffset();
 
-    // ✅ restauramos la entrada desordenada
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         animateImages();
-        setTimeout(() => headline.classList.add("is-out"), 900);
+
+        if (!isMobile()){
+          setTimeout(() => headline.classList.add("is-out"), 900);
+        }
       });
     });
-
   }, HEADLINE_MS + GAP);
 }
 
 function init(){
   applyColCount();
+  bindMenu();
   bindDrag();
   runSequence();
 }
@@ -658,6 +713,12 @@ window.addEventListener("resize", () => {
   resizeT = setTimeout(async () => {
     applyColCount();
     await ensureFillHeight();
+
+    zoom = 1;
+    zoomTarget = 1;
+    drag.offset = 0;
+    drag.v = 0;
+
     measureLimits();
     applyOffset();
   }, 150);
